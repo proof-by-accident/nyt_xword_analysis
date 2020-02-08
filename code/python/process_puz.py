@@ -9,11 +9,6 @@ import matplotlib.pyplot as plt
 
 import puz
 
-import spacy
-from spacy import tokenizer
-
-NLP = spacy.load('en_core_web_lg')
-
 BASE_DIR = os.path.abspath('../../')
 CODE_DIR = os.path.join(BASE_DIR,'code/python')
 PICKLE_DIR = os.path.join(CODE_DIR,'pickles')

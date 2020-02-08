@@ -2,3 +2,5 @@ puzpy
 pandas
 spacy
 matplotlib
+scikit-learn
+pip install pyldavis

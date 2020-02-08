@@ -95,7 +95,7 @@ func process(iStart int, blockSize int, cookies []map[string]string, saveDir str
 func main() {
 	nytCookies := getNYTCookies()
 
-	saveDir := "/home/peter/Junkspace/nyt_xword/puz/"
+	saveDir := "/home/peter/Junkspace/nyt_xword/data/puz/"
 	//nWorkers := 100
 	nPuzzles := 30000
 	blockSize := 300
