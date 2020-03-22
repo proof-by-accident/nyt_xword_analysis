@@ -23,23 +23,30 @@ if __name__ == '__main__':
 
     except:
         try:
-            with open(os.path.join(PICKLE_DIR,'clue_word_embeddings.p'),'rb'):
+            with open(os.path.join(PICKLE_DIR,'clue_wordrembeddings.p'),'rb'):
                 pickle.load(f)
 
         except:
+            nclues = clues.shape[0]
+            ntext = int(.01*nclues)
+
+            clue_samps = np.random.choice(range(nclues),ntext)
+            clues_text = list(clues.clue_text.iloc[clue_samps])
+
             words = []
+
             done = 0
-            tot = len(clues.clue_text)
-            out = str(done) + '/' + str(tot)
+            out = str(done) + '/' + str(ntext)
             sys.stdout.write(out)
             sys.stdout.flush
             sys.stdout.write('\b'*len(out))
-            for t in clues.clue_text:
+
+            for t in clues_text:
                 tok = NLP(t)
                 new_words = [_ for _ in tok if not(_.is_stop) and not (_.is_punct)]
                 words += new_words
 
-                out = str(done) + '/' + str(tot)
+                out = str(done) + '/' + str(ntext)
 
                 if (done%500) == 0:
                     sys.stdout.write(out)
@@ -48,10 +55,8 @@ if __name__ == '__main__':
                 done += 1
 
             dims = 300
-            #nrows = len(words)
-            nrows = 100000
+            nrows = len(words)
             clue_word_embeddings = np.zeros((nrows,dims))
-            word_samps = np.random.choice(range(len(words)),nrows)
 
             j = 0
             for i in word_samps:
