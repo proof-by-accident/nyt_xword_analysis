@@ -6,6 +6,8 @@ NLP = spacy.load('en_core_web_lg')
 import numpy as np
 
 from sklearn.decomposition import PCA
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.cluster import KMeans
 
 def doc_avg_proj(doc,proj):
     tok = 1
@@ -23,7 +25,7 @@ if __name__ == '__main__':
 
     except:
         try:
-            with open(os.path.join(PICKLE_DIR,'clue_wordrembeddings.p'),'rb'):
+            with open(os.path.join(PICKLE_DIR,'clue_word_embeddings.p'),'rb') as f:
                 pickle.load(f)
 
         except:
@@ -58,12 +60,10 @@ if __name__ == '__main__':
             nrows = len(words)
             clue_word_embeddings = np.zeros((nrows,dims))
 
-            j = 0
-            for i in word_samps:
-                clue_word_embeddings[j,:] = words[i].vector
-                j += 1
+            for i in range(nrows):
+                clue_word_embeddings[i,:] = words[i].vector
 
-            with open(os.path.join(PICKLE_DIR,'clue_word_embeddings.p'),'wb'):
+            with open(os.path.join(PICKLE_DIR,'clue_word_embeddings.p'),'wb') as f:
                 pickle.dump(clue_word_embeddings,f)
 
     pca = PCA(n_components=20)
@@ -75,5 +75,12 @@ if __name__ == '__main__':
     word_projections = pd.DataFrame.from_dict(
         {'proj1': list(np.dot(clue_word_embeddings,pc1)),
          'proj2': list(np.dot(clue_word_embeddings,pc2)),
-         'word': [words[i] for i in word_samps]}
+         'word': [words[i] for i in range(nrows)]}
     )
+
+    proj1 = word_projections['proj1']
+    proj2 = word_projections['proj2']
+
+    kmeans = KMeans(n_clusters=6, random_state=0).fit(np.array([proj1,proj2]).T)
+    clues = clues.iloc[clue_samps]
+    clues.insert(clues.shape[-1],'cluster',kmeans.labels_)
