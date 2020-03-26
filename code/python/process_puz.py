@@ -16,6 +16,13 @@ DATA_DIR = os.path.join(BASE_DIR,'data')
 PUZ_DIR = os.path.join(DATA_DIR,'puz')
 PUZ_FILES = [os.path.join(PUZ_DIR,_) for _ in os.listdir(PUZ_DIR)]
 
+ALPHANUMWS_RE = re.compile('[0-9a-zA-Z\s]')
+def clean_text(text):
+    try:
+        return(''.join(re.findall(ALPHANUMWS_RE,text)).strip().lower())
+    except:
+        return(' ')
+
 def title2date(title):
     pattern = re.compile("[a-z]{,9}\s[0-9]{,2},\s[0-9]{4}")
     title = title.strip().lower()
@@ -66,6 +73,7 @@ def clues2pandas(fname):
                'is_culture_clue': is_culture_clue(clue['clue']),
                'is_pun_clue': is_pun_clue(clue['clue']),
                'clue_text': clue['clue'],
+               'clue_text_clean': clean_text(clue['clue']),
                'answer_length': clue['len'],
                }
         ret.append(row)
@@ -82,6 +90,7 @@ def clues2pandas(fname):
                'is_culture_clue': is_culture_clue(clue['clue']),
                'is_pun_clue': is_pun_clue(clue['clue']),
                'clue_text': clue['clue'],
+               'clue_text_clean': clean_text(clue['clue']),
                'answer_length': clue['len'],
                }
         ret.append(row)

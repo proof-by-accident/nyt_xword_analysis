@@ -37,11 +37,19 @@ if __name__ == '__main__':
         with open(os.path.join(PICKLE_DIR,'word_clue_matrix.p'),'wb') as f:
             pickle.dump(data,f)
 
-    nmf = NMF(n_components=10)
-    Q = nmf.fit_transform(data).T # columns of Q are latent representations of clues
-    P = nmf.components_ # columns of P are latent representations of words
+    try:
+        with open(os.path.join(PICKLE_DIR,'word_clue_factors.p'),'rb') as f:
+            pickle.load(f)
 
-    kmeans = KMeans(n_clusters=20, random_state=0).fit(Q.T)
+    except:
+        nmf = NMF(n_components=10)
+        Q = nmf.fit_transform(data).T # columns of Q are latent representations of clues
+        P = nmf.components_ # columns of P are latent representations of words
+
+        with open(os.path.join(PICKLE_DIR,'word_clue_factors.p'),'wb') as f:
+            pickle.dump([Q,P],f)
+
+    kmeans = KMeans(n_clusters=11, random_state=0).fit(Q.T)
     clues.insert(clues.shape[-1],'cluster',kmeans.labels_)
 
     with open(os.path.join(PICKLE_DIR,'clues_df_clusts.p'),'wb') as f:
