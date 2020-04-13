@@ -34,7 +34,8 @@ func getNYTCookies() []map[string]string {
 	db, err := sql.Open("sqlite3", cookieDB)
 	errCheck(err)
 
-	rows, err := db.Query("SELECT name,value FROM moz_cookies WHERE baseDomain=='nytimes.com'")
+	// mozilla updated Firefox and now this SQL request no longer works
+	rows, err := db.Query("SELECT name,value FROM moz_cookies WHERE baseDomain=='nytimes.com';")
 	errCheck(err)
 
 	var name string
