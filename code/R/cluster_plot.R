@@ -6,7 +6,7 @@ library(data.table)
 library(tidyr)
 library(viridis)
 
-FIG.DIR = '/home/peter/Junkspace/nyt_xword/figures/low_hanging_fruit/'
+FIG.DIR = '/home/peter/Junkspace/nyt_xword/figures/'
 DATA.DIR = '/home/peter/Junkspace/nyt_xword/data/'
 clues = fread(paste0(DATA.DIR,'clues_df_clusts.csv')) %>% select(-'V1')
 clues$puzzle_year %<>% as.character %>% as.numeric
@@ -20,34 +20,9 @@ clues$puzzle_day_name %<>% factor(level=c('Mon',
                                           'Sun',
                                           '0'))
 
-max_words_find = function(text,n=5){
-  words = strsplit(text,' ')
-  words %<>% unlist %>% table %>% sort(decreasing=TRUE)
-  return(words%>%head(n))
-}
+clues %>% select(cluster) %>% group_by(cluster) %>% count %>% t %>% write.csv('cluster_size.csv')
 
-plot_shape = c(16,7)
-n = 5
-for (c in unique(clues$cluster)){
-  clust_text = clues %>% filter(cluster==c) %>% select(clue_text_clean) %>% unlist
-  max_words = max_words_find(clust_text,n=n)
-
-  if (c==unique(clues$cluster)[1]){
-    clust.df = data.frame(cluster=rep(c,n),
-                          word=names(max_words),
-                          count=as.numeric(max_words))
-  }
-
-  else {
-    new.df = data.frame(cluster=rep(c,n),
-                        word=names(max_words),
-                        count=as.numeric(max_words))
-
-    clust.df %<>% rbind(new.df)
-  }
-}
-
-
+# PLOT PUN/CULTURE PERCENT BY CLUSTER
 clues_clust_summ = clues %>% group_by(cluster) %>%
   summarize(pun.mn = mean(is_pun_clue),
             pun.sd = sqrt(mean(is_pun_clue)*(1-mean(is_pun_clue))/n()),
@@ -62,25 +37,59 @@ p.pun.cult = ggplot(clues_clust_summ,aes(x=cluster)) +
   theme(text=element_text(size=16))
 ggsave('cluster_pun_cult.png',p.pun.cult)
 
-clust.exs.df = list()
-nexamps = 5
-for (c in sort(big.clusts)){
-  examps = sample(clues %>% filter(cluster==c) %>% select(clue_text) %>% unlist,nexamps)
-  clust.exs.df[[paste0('cluster.',c)]] = examps
+# PLOT CLUSTER GROUP TIME SERIES
+cluster_group = function(clust) {
+  wordplay = c(4,6)
+  wordplay10 = c(4,6,10)
+  trivia = c(5,7,8,9)
+  nickname = c(3)
+  simile = c(1)
+  abbr = c(2)
+
+  if (clust %in% wordplay10){return('Wordplay')}
+  if (clust %in% trivia){return('Trivia')}
+  if (clust %in% nickname){return('Nickname')}
+  if (clust %in% simile){return('Simile')}
+  if (clust %in% abbr){return('Abbr')}
+  else {return('Misc')}
 }
 
-clust.exs.df %<>% as.data.frame
-rownames(clust.exs.df) = c()
-write.table(clust.exs.df,'./cluster_examps.scsv',row.names=FALSE,sep=';')
+clues$group = sapply(clues$cluster,cluster_group) %>%
+  unlist %>%
+  as.character
 
-clues_clust_summ = clues %>% filter(cluster!=0) %>%
-  group_by(puzzle_year,cluster) %>%
+year_group_summ = clues %>%
   add_count(puzzle_year) %>%
-  summarize(usage=n(),tot=n)
+  group_by(puzzle_year,group) %>%
+  summarize(usage=n()/mean(n))
 
-p.clust.year = ggplot(clues_clust_summ,aes(x=puzzle_year, y=usage/n, color=as.factor(cluster))) +
+plot_shape = c(16,7)
+p.group.year = ggplot(year_group_summ %>% filter(group!='Misc'),
+                      aes(x=puzzle_year, y=usage, color=as.factor(group),group=group)) +
   geom_line()+
-  scale_colour_viridis_d() +
-  labs(x='Day',y='Percent Pun Clues',title='Average Percent Pun Clues by Year')
+  #scale_colour_viridis_d() +
+  labs(x='Day',y='Usage',title='Percent Clues Belonging to Group by Year',color='Group') +
+  theme(text=element_text(size=20),
+        legend.text=element_text(size=16),
+        title=element_text(size=22))
+ggsave(paste0(FIG.DIR,'plt_group_year.png'),p.group.year,width=plot_shape[1],height=plot_shape[2])
 
 
+day_group_summ = clues %>%
+  add_count(puzzle_day_name) %>%
+  group_by(puzzle_day_name,group) %>%
+  summarize(usage=n()/mean(n))
+
+p.group.day = ggplot(day_group_summ %>% filter(group!='Misc'),
+                      aes(x=puzzle_day_name, y=usage, color=as.factor(group),group=group)) +
+  geom_line()+
+  #scale_colour_viridis_d() +
+  labs(x='Day',y='Usage',title='Percent Clues Belonging to Group by Day',color='Group') +
+  theme(text=element_text(size=20),
+        legend.text=element_text(size=16),
+        title=element_text(size=22))
+ggsave(paste0(FIG.DIR,'plt_group_day.png'),p.group.day,width=plot_shape[1],height=plot_shape[2])
+
+library(patchwork)
+p.group = p.group.year/p.group.day
+ggsave(paste0(FIG.DIR,'plt_group.png'),p.group,width=plot_shape[1],height=2*plot_shape[2])

@@ -4,10 +4,13 @@ import pickle
 import re
 import datetime
 
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 import puz
+
+import spacy
 
 BASE_DIR = os.path.abspath('../../')
 CODE_DIR = os.path.join(BASE_DIR,'code/python')
@@ -17,18 +20,19 @@ PUZ_DIR = os.path.join(DATA_DIR,'puz')
 PUZ_FILES = [os.path.join(PUZ_DIR,_) for _ in os.listdir(PUZ_DIR)]
 
 ALPHANUMWS_RE = re.compile('[0-9a-zA-Z\s]')
+DATEMATCH_RE = re.compile("[a-z]{,9}\s[0-9]{,2},\s[0-9]{4}")
 def clean_text(text):
     try:
         return(''.join(re.findall(ALPHANUMWS_RE,text)).strip().lower())
     except:
         return(' ')
 
+
 def title2date(title):
-    pattern = re.compile("[a-z]{,9}\s[0-9]{,2},\s[0-9]{4}")
     title = title.strip().lower()
 
     try:
-        date = pattern.search(title).group(0)
+        date = DATEMATCH_RE.search(title).group(0)
     except:
         return(None)
 
@@ -38,7 +42,18 @@ def title2date(title):
     except ValueError:
         dt = datetime.datetime.strptime(date,'%b %d, %Y')
 
-    return(dt.strftime('%Y-%m-%d-%a'))
+    return(dt)
+
+
+def puz2npgrid(p,grid_size=50):
+    grid = np.zeros((grid_size,grid_size))
+
+    fill = np.array([float(_!='-') for _ in p.fill])
+    fill = fill.reshape((p.height,p.width))
+
+    grid[0:p.height,0:p.width] = fill
+
+    return(grid)
 
 
 def clues2pandas(fname):
@@ -53,11 +68,10 @@ def clues2pandas(fname):
     date = title2date(p.title)
 
     try:
-        date_split= date.split('-')
-        year = int(date_split[0])
-        month = int(date_split[1])
-        day = int(date_split[2])
-        day_name = date_split[3]
+        year = date.year
+        month = date.month
+        day = date.day
+        day_name = date.strftime('%A')
     except:
         year = month = day = day_name = 0
 
@@ -153,6 +167,9 @@ if __name__=='__main__':
         with open(os.path.join(PICKLE_DIR,'clues_df.p'),'rb') as f:
             clues = pickle.load(f)
     except:
+        print('Unpacking clues...')
+        NLP = spacy.load('en_core_web_lg')
+
         dfs = []
         barMax = len(PUZ_FILES)
         barWidth=0.
@@ -181,4 +198,51 @@ if __name__=='__main__':
 
         clues.to_csv(os.path.join(DATA_DIR,'clues.csv'))
 
+    try:
+        with open(os.path.join(PICKLE_DIR,'grids_df.p'),'rb') as f:
+            grids = pickle.load(f)
 
+    except:
+        print('Unpacking grids...')
+        grids = []
+        dates = []
+        day_names = []
+        years = []
+        puz_numbers = []
+
+        barMax = len(PUZ_FILES)
+        barWidth=0.
+        progbar = str(round(100*barWidth/barMax)) + '%'
+        sys.stdout.write(progbar)
+        sys.stdout.flush()
+        sys.stdout.write("\b"*len(progbar))
+        for fn in PUZ_FILES:
+            p = puz.read(fn)
+            puz_numbers.append(os.path.splitext(os.path.basename(fn))[0])
+            grids.append(puz2npgrid(p))
+            try:
+                dates.append(title2date(p.title).strftime('%Y-%m-%d-%a'))
+
+                dt = title2date(p.title)
+                day_names.append(dt.strftime('%A'))
+                years.append(dt.year)
+
+            except:
+                dates.append(0)
+                day_names.append(0)
+                years.append(0)
+
+            barWidth += 1
+            progbar = str(round(100*barWidth/barMax)) + '%'
+            sys.stdout.write(progbar)
+            sys.stdout.flush()
+            sys.stdout.write("\b"*len(progbar))
+
+        grids = pd.DataFrame.from_dict({'puzzle_number':puz_numbers,
+                                        'date':dates,
+                                        'year':years,
+                                        'day_name':day_names,
+                                        'grid':grids})
+
+        with open(os.path.join(PICKLE_DIR,'grids_df.p'),'wb') as f:
+            pickle.dump(grids,f)

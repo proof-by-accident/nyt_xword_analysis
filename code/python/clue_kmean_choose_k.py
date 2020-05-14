@@ -19,7 +19,7 @@ if __name__ == '__main__':
             Q,P = pickle.load(f)
 
     except:
-        exec(open(os.path.join(CODE_DIR,'clue_wmf.py')).read())
+        exec(open(os.path.join(CODE_DIR,'clue_feat_eng.py')).read())
 
 
     aics = []
@@ -29,8 +29,8 @@ if __name__ == '__main__':
         km = KMeans(n_clusters=k, random_state=0).fit(Q.T)
         aics.append(kmeans_AIC(km))
 
-plt.plot(k_vals,aics)
-plt.xlabel('Number of Clusters (k)',size=16)
-plt.ylabel('Akaike Information Criterion',size=16)
-plt.savefig('aic.png')
-plt.close()
+    plt.plot(k_vals,aics)
+    plt.xlabel('Number of Clusters (k)',size=16)
+    plt.ylabel('Akaike Information Criterion',size=16)
+    plt.savefig('aic.png')
+    plt.close()
